@@ -3,8 +3,8 @@
 Backend-first platform that ingests resumes and job descriptions, extracts and
 normalizes structured candidate data, and ranks applicants against a JD with a
 hybrid, explainable pipeline — plus AI analysis, comparison, duplicate
-detection, interview-question generation, resume review/ATS optimization, a
-role-aware copilot, and exportable reports.
+detection, interview-question generation, resume review/ATS optimization,
+explainable ranking rationales, and exportable reports.
 
 Every AI capability is coordinated through a single **AI Orchestrator**; no
 endpoint or worker step calls a model directly. The system follows Clean
@@ -40,7 +40,7 @@ graph TD
         PM["PromptManager (versioned)"]
         MR["ModelRouter (tiered)"]
         OV["OutputValidator (Pydantic)"]
-        SVc["Services: Auth · RBAC · Job · Resume · Parsing · Embedding · Retrieval · Ranking · Analysis · Comparison · Interview · Reviewer · Copilot · Report · Audit · Evaluation"]
+        SVc["Services: Auth · RBAC · Job · Resume · Parsing · Embedding · Retrieval · Ranking · Analysis · Comparison · Interview · Reviewer · Report · Audit · Evaluation"]
         PIPE["IngestionPipeline (UPLOADED→PARSED→NORMALIZED→EMBEDDED)"]
     end
 
@@ -262,6 +262,33 @@ The automatic upload chain (Celery over Redis) advances only through
 **Analyze / Rank / Report are on-demand**, recruiter-triggered against a chosen
 job, and operate only over that job's associated candidates.
 
+## Web UI (React + TypeScript + Vite)
+
+A production-quality SaaS frontend lives in `frontend/` (React 18 + TypeScript +
+Vite, React Router). It's an ATS-style app with a sidebar, dashboard, jobs &
+candidate management, resume upload with a live pipeline stepper
+(Uploaded → Parsed → Normalized → Embedded → Analyzed → Ranked → Report Ready),
+ranking table, analysis, comparison, interview questions, resume/ATS review,
+report viewer, settings, and profile — with **dark mode**,
+responsive layout, loading skeletons, empty/error states, toasts, confirm
+dialogs, and **searchable dropdowns instead of UUID inputs**.
+
+The app is **built to static assets and served by FastAPI at `/`** (single
+service — no separate frontend host needed). In development it runs on the Vite
+dev server and proxies API calls to the backend.
+
+```bash
+# Dev (hot reload): backend on :8000, frontend on :5173
+uvicorn api.app:app --reload
+cd frontend && npm install && npm run dev
+
+# Production build (served by FastAPI at /)
+cd frontend && npm run build      # emits frontend/dist
+```
+
+Docs: see `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DEPLOYMENT.md`,
+`docs/DEVELOPER.md`, `docs/TROUBLESHOOTING.md`.
+
 ## Offline_Mode (no NVIDIA key)
 
 Set `AI_MODE=offline` (the default) — or simply omit `NVIDIA_API_KEY` — to bind
@@ -287,6 +314,7 @@ Same image, env-only difference. AI is the hosted **NVIDIA NIM** API.
 
 - **Fly.io**: `fly deploy` (uses `fly.toml`; `alembic upgrade head` runs on release).
 - **Render**: connect the repo (uses `render.yaml`; migrations via `preDeployCommand`).
+- **Railway**: uses `railway.json` (Dockerfile build; migrations run in `startCommand`).
 - **Datastores**: Neon/Supabase (Postgres), Upstash (Redis), Chroma Cloud (vectors).
 
 ### NVIDIA NIM key setup
